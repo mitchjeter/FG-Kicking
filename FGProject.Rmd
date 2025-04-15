@@ -1,0 +1,433 @@
+---
+title: "FG Project"
+author: "Mitch Jeter"
+date: "2025-02-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(nflfastR)
+library(dplyr)
+
+#play-by-play data for 2022–2024
+pbp_data <- load_pbp(seasons = 2022:2024)
+
+# Filter for field goal attempts
+fg_data <- pbp_data %>%
+  filter(play_type == "field_goal")
+
+# Add high-leverage situations (e.g., 4th quarter, close games, overtime)
+fg_data <- fg_data %>%
+  mutate(clutch = ifelse(
+    (game_seconds_remaining <= 120 | game_half == "Overtime") & abs(score_differential) <= 3,
+    TRUE,
+    FALSE
+  ))
+
+
+
+```
+
+```{r}
+write.csv(fg_data, "fg_data.csv")
+```
+
+
+NFL Fast R
+
+Field Goal Performance 
+Field goal results and attempts:
+
+field_goal_result
+kick_distance
+field_goal_attempt
+
+Kicker-specific data:
+kicker_player_id
+kicker_player_name
+
+Success probabilities:
+fg_prob (field goal probability)
+vegas_fg_prob
+
+Game outcomes related to field goals:
+
+wpa (Win Probability Added)
+vegas_wpa
+
+
+
+Game Time and Context
+Time-related stats:
+quarter_seconds_remaining
+half_seconds_remaining
+game_seconds_remaining
+
+Timeouts and pressure moments:
+home_timeouts_remaining
+away_timeouts_remaining
+timeout_team
+quarter_end
+
+Score differential and team performance:
+score_differential
+score_differential_post
+
+Win probabilities and adjustments:
+wp (Win Probability)
+home_wp (Home team Win Probability)
+away_wp (Away team Win Probability)
+
+```{r}
+# Filter for clutch kicks
+team_clutch_stats <- fg_data %>%
+  filter(clutch == TRUE) %>%
+  group_by(posteam) %>%
+  summarize(
+    total_clutch_kicks = n(),
+    clutch_makes = sum(field_goal_result == "made"),
+    clutch_fg_pct = mean(field_goal_result == "made"),
+    total_wpa = sum(wpa, na.rm = TRUE)
+  ) %>%
+  mutate(
+    clutch_score = clutch_fg_pct * 0.5 + (total_wpa / total_clutch_kicks) * 0.5
+  ) %>%
+  arrange(desc(clutch_score))
+
+# Add ranks
+team_clutch_stats <- team_clutch_stats %>%
+  mutate(rank = row_number())
+
+# View results
+print(team_clutch_stats)
+
+```
+```{r}
+# Filter teams with 100% FG percentage for clutch kicks
+teams_100_percent_clutch <- team_clutch_stats %>%
+  filter(clutch_fg_pct == 1)
+
+# View results
+print(teams_100_percent_clutch)
+
+```
+
+
+
+
+```{r}
+# Load libraries
+library(tidyverse)
+library(ggimage)
+
+# Team abbreviations and their corresponding logo URLs
+team_logos <- data.frame(
+  posteam = c(
+    "ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE",
+    "DAL", "DEN", "DET", "GB", "HOU", "IND", "JAX", "KC",
+    "LAC", "LAR", "LV", "MIA", "MIN", "NE", "NO", "NYG",
+    "NYJ", "PHI", "PIT", "SF", "SEA", "TB", "TEN", "WAS"
+  ),
+  logo_url = c(
+    "https://a.espncdn.com/i/teamlogos/nfl/500/ari.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/atl.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/bal.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/buf.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/car.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/chi.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/cin.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/cle.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/den.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/det.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/hou.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/ind.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/jax.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/kc.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/lac.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/lar.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/lv.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/mia.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/min.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/ne.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/no.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/phi.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/pit.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/sea.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/tb.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/ten.png",
+    "https://a.espncdn.com/i/teamlogos/nfl/500/was.png"
+  )
+)
+
+# Assuming team_clutch_stats is your data with clutch scores
+team_clutch_stats <- team_clutch_stats %>%
+  left_join(team_logos, by = "posteam")
+
+clutch_plot <- team_clutch_stats %>%
+  ggplot(aes(x = reorder(posteam, clutch_score), y = clutch_score)) +
+  geom_image(aes(image = logo_url), size = 0.1, by = "width") +  # Only show the logos
+  coord_flip() +
+  labs(
+    title = "NFL Team Clutch Kicker Rankings (2022-2024)",
+    subtitle = "Based on Clutch FG% and WPA in High-Leverage Situations",
+    x = "Team",
+    y = "Clutch Score"
+  ) +
+  theme_minimal() +
+  theme(
+    text = element_text(size = 12),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_blank(),  
+    plot.title = element_text(face = "bold", size = 16)
+  )
+
+# Print the plot
+print(clutch_plot)
+
+```
+
+```{r}
+# Assuming team_clutch_stats is already calculated and includes logos
+
+# Rank teams by the most clutch kicks
+team_clutch_stats <- team_clutch_stats %>%
+  arrange(desc(total_clutch_kicks)) %>%
+  mutate(rank = row_number())
+
+# Plot the teams by the most clutch kicks with logos
+clutch_kicks_plot <- team_clutch_stats %>%
+  ggplot(aes(x = reorder(posteam, total_clutch_kicks), y = total_clutch_kicks)) +
+  geom_image(aes(image = logo_url), size = 0.1, by = "width") +  # Only show the logos
+  coord_flip() +
+  labs(
+    title = "NFL Teams Ranked by Total Clutch Kicks (2022-2024)",
+    subtitle = "Based on the Number of Clutch Field Goals Attempted",
+    x = "Team",
+    y = "Total Clutch Kicks"
+  ) +
+  theme_minimal() +
+  theme(
+    text = element_text(size = 12),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_blank(),  # Hide the y-axis text
+    plot.title = element_text(face = "bold", size = 16)
+  )
+
+# Print the plot
+print(clutch_kicks_plot)
+
+```
+
+
+
+
+
+MODEL
+
+How to determine what factors create missed FGS 
+Is your team more liklet to miss a FG in the clutch
+
+```{r}
+kick_made <- as.numeric(as.factor(fg_data$field_goal_result))
+```
+
+
+```{r}
+table(fg_data$field_goal_result, kick_made)
+```
+
+```{r}
+fg_data <- fg_data[which(fg_data$field_goal_result != "blocked"),]
+```
+
+```{r}
+kick_made <- abs(as.numeric(as.factor(fg_data$field_goal_result)) - 2)
+```
+
+```{r}
+fg_data$wind[is.na(fg_data$wind)] <- 0 
+```
+
+
+```{r}
+table(fg_data$field_goal_result, kick_made)
+```
+
+
+
+
+
+```{r}
+model_data <- fg_data[, c("kick_distance", "wind", "quarter_seconds_remaining",
+"half_seconds_remaining","score_differential",
+"wp", 
+"home_wp",  "away_wp", 
+"game_seconds_remaining", "clutch")]
+```
+
+
+```{r}
+library(xgboost)
+```
+
+```{r}
+dtrain <- xgb.DMatrix(data = as.matrix(model_data), label = kick_made)
+```
+
+
+```{r}
+xgb_1 <- xgboost(dtrain, 
+                 objective = "binary:logistic", 
+                 nrounds = 100)
+```
+
+```{r}
+# Extract importance
+imp_mat <- xgb.importance(model = xgb_1)
+# Plot importance (top 10 variables)
+xgb.plot.importance(imp_mat, top_n = 10)
+```
+
+
+```{r}
+#install.packages("splitstackshape")
+#install.packages("SHAPforxgboost")
+source("~/Downloads/a_insights_shap_functions.r", echo=TRUE)
+
+library(splitstackshape)
+library(ggforce)
+library(SHAPforxgboost)
+
+#Calculate SHAP importance
+shap_result_1 <- shap.score.rank(xgb_model = xgb_1,
+X_train = as.matrix(model_data),
+shap_approx = F)
+```
+
+
+```{r}
+# Calculate data for SHAP plot
+shap_long_1 = shap.prep(shap = shap_result_1,
+      X_train =  as.matrix(model_data),
+      top_n = 8)
+```
+
+
+```{r}
+# Generate SHAP plot
+plot.shap.summary(data_long = shap_long_1)
+```
+
+
+```{r}
+set.seed(123456) # Set seed for reproducability
+# Create cross-validation index
+cv_ind <- sample(1:5, nrow(fg_data), replace = TRUE )
+pred_store <- rep(NA, nrow(fg_data))
+# Create accuracy store
+cv_acc <- rep(NA, 5)
+for(i in 1:5){ # For 1 to 5
+  cv_train <- fg_data[cv_ind != i ,c(3:69)] # Create training data
+  cv_test <- fg_data[cv_ind == i,  c(3:69)] # Create test data
+
+  
+  dtrain <- xgb.DMatrix(data = as.matrix(model_data[cv_ind != i ,]), label = kick_made[cv_ind != i])
+  dtest <- xgb.DMatrix(data = as.matrix(model_data[cv_ind == i ,]), label = kick_made[cv_ind == i])
+  
+  
+  xgb_1 <- xgboost(dtrain, 
+                 objective = "binary:logistic", 
+                 nrounds = 100)
+  pred_store[cv_ind == i] <- predict(xgb_1, dtest) # Create test data predictions
+
+}
+
+# Print cross validated accuracy scores
+cv_acc
+
+
+fg_data$prob <- pred_store
+fg_data$kick_made <- kick_made
+
+```
+
+
+```{r}
+fg_data$diff <- fg_data$kick_made - fg_data$prob
+```
+
+
+```{r}
+# Filter for clutch kicks and include kicker name
+kicker_clutch_stats <- fg_data %>%
+  filter(clutch == TRUE) %>%
+  group_by(posteam, kicker_player_name) %>%
+  summarize(
+    total_clutch_kicks = n(),
+    clutch_makes = sum(field_goal_result == "made"),
+    clutch_fg_pct = mean(field_goal_result == "made"),
+    total_wpa = sum(wpa, na.rm = TRUE),
+    .groups = 'drop'
+  ) %>%
+  mutate(
+    clutch_score = clutch_fg_pct * 0.5 + (total_wpa / total_clutch_kicks) * 0.5
+  ) %>%
+  arrange(desc(clutch_score))
+
+# Add ranks
+kicker_clutch_stats <- kicker_clutch_stats %>%
+  mutate(rank = row_number())
+
+# View results
+print(kicker_clutch_stats)
+
+```
+
+```{r}
+# Summarize expected vs actual FG makes by kicker
+kicker_performance <- fg_data %>%
+  group_by(kicker_player_name) %>%
+  summarize(
+    total_kicks = n(),
+    actual_makes = sum(kick_made),
+    expected_makes = sum(prob),
+    diff = actual_makes - expected_makes
+  ) %>%
+  arrange(desc(diff))
+
+# View the performance table
+print(kicker_performance)
+
+```
+
+```{r}
+library(ggplot2)
+
+# Create a bar plot for expected vs actual makes
+ggplot(kicker_performance, aes(x = reorder(kicker_player_name, diff), y = diff, fill = diff > 0)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  coord_flip() +  # Flip for better readability
+  labs(
+    title = "Expected vs Actual Field Goals Made by Kicker",
+    x = "Kicker",
+    y = "Actual Makes - Expected Makes"
+  ) +
+  scale_fill_manual(values = c("red", "green")) +  # Red for underperformance, green for overperformance
+  theme_minimal()
+
+```
+

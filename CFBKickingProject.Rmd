@@ -1,0 +1,88 @@
+---
+title: "Jeter Final"
+output: ioslides_presentation
+date: "2024-07-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(ggplot2)
+library(dplyr)
+```
+
+## R Markdown
+
+This is an R Markdown presentation. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+## College Football Field Goal Kicking Percentages Based on Conferences
+
+## Conference Information
+
+```{r}
+kicks <- read.csv("/Users/mitchjeter/Google Drive/Intro to Stats/kick_data.csv")
+
+teams <- kicks %>% 
+  group_by(Conf) %>% 
+  count()
+
+ggplot(teams, aes(x= Conf , y= n )) +
+  geom_col() +  theme_light() +
+  labs(title = "Number of Teams per Conference")
+
+
+```
+
+## Kicking Percentages Based on Conference
+
+```{r}
+top_kicker_conf <- kicks %>% 
+  group_by(Conf) %>% 
+  summarize(FG. = mean(FG.), 
+            RK = mean(Rk))
+
+ggplot(top_kicker_conf, aes(x= Conf , y= FG. , fill = FG. )) +
+  geom_col() +  theme_light() + 
+  scale_fill_gradient2(low= 'red', mid = "yellow", high= "darkgreen", midpoint =75)+
+  labs(title = "FG Percentage Based On Conference")
+```
+
+## How many kickers were in the top 25 in FG percentage based on conferences ?
+```{r}
+top25 <-  filter(kicks, FG. > 84.1) %>% 
+  group_by(Conf) %>% 
+  count()
+
+ggplot(top25, aes(x= Conf , y= n , fill= 'pink' )) +
+  geom_col() +  theme_light() + 
+  labs(title = "Top 25 Kickers in FG Percentage Based On Conference")
+```
+
+## Average Rank of FG Percentage in CFB Based on Conference
+```{r}
+top_kicker_conf <- kicks %>% 
+    group_by(Conf) %>% 
+    summarize(FG. = mean(FG.), 
+              RK = mean(Rk))
+  
+  ggplot(top_kicker_conf, aes(x= Conf , y= RK , fill = FG. )) +
+    geom_col() +  theme_light() +
+    labs(title = "Average Rank of FG Percentage in CFB Based On Conference")
+  
+```
+## WRITE UP 
+
+#In this Final Presentation, I wanted to look at Field Goal kicking throughout college football. There seems to be a constant disagreement all of the time where the “hardest places to play” in college football are. What conferences do those venues belong to? Do those venues make it harder for kickers to make kicks in those environments? There is many factors that we can look at and discuss which I will do in this presentation. The data I looked at is for college football field goal kicking from Sports-Reference. This data came from the 2023-2024 season which is before the new College Football conference realignment in 2024. 
+#I also wanted to look at the top 25 percentages from the 2023 season and see what conference those respective kickers played during that season. This could indicate potentially “easier” conferences to play in if the kicking percentages were high. I would argue that this could be due to the fact that some conferences have an average stadium capacity of over 80,000 where other conferences have an average stadium capacity of 30,000. Most lower conferences also tend to not sell out as many games. This could lead to kicking being either easier or harder based on the attendance, pressure, and environment that the stadium creates. 
+#While looking at the data, my ultimate goal was to find if it seemed to be harder to kick in different conferences for college football. I looked at field goal percentages from the schools in each of their respective conferences. I took the average of the field goal percentage from each conference and graphed them in a bar graph to compare. This allowed me to see the average percentage for each conference. There are some assumptions that can be made from looking at this data, but it may not give us a clear answer to our original question. Some sources of error when looking at this data could be, does weather play a factor? Do the better teams in the “better conferences” have better kickers overall? There are many other questions that can be asked and I would be interested in looking into them more if there was more time in my study. 
+#Based on my results, I can come to the conclusion that based on the graphs I made, stadium capacity based on the conference does not play a major factor in field goal percentages. This may be because the best teams are usually in the SEC or the ACC. This could mean the best young kickers are going to these schools out of high school with lots of talent. However, weather may have an impact as we see the SEC and ACC have the highest field goal kicking percentages. As we moved into the MAC and the Big10, percentages decreased which could be because of the weather. Overall, I enjoyed this class and this assignment and I learned a lot when looking at this data. 
+
+
+
+
+
+
+
+
